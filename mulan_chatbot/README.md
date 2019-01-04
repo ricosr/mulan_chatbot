@@ -9,3 +9,7 @@
 * **注意: 该方法服务会监听在10010端口**
 * 说明: 每当有IR请求, connect.py会实例化一个reterival_client.Client类对象, 连接本地10086端口的IR的服务
 * 填写微信公众号服务器地址(URL)和令牌(Token), Token在config.py中文件配置
+
+## 运行环境:
+* Python3
+* 最好是Linux, Windows上需要安装VS2010+并且微信依赖库安装会出现问题
