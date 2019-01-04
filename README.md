@@ -12,4 +12,4 @@
 
 ## 运行环境:
 * Python3
-* 最好是Linux, Windows上需要安装VS2010+并且微信依赖库安装会出现问题
+* 最好是Linux, Windows上微信依赖库安装会出现问题
