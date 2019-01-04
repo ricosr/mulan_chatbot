@@ -1,11 +1,3 @@
-argparse
-fuzzywuzzy
-whoosh
-jieba
-scikit-learn
-python-Levenshtein
-nltk
-gensim
 wechatpy[pycrypto]
 falcon
 waitress

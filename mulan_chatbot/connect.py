@@ -21,7 +21,6 @@ from reterival_client import Client
 from translate_l import translate
 import config
 
-
 # TODO: record log
 class Connect:
     def __init__(self):
@@ -46,7 +45,7 @@ class Connect:
             b[i.split('=')[0]] = i.split('=')[1]
 
         try:
-            check_signature(token='5327592', signature=b['signature'], timestamp=b['timestamp'], nonce=b['nonce'])
+            check_signature(token=config.Token, signature=b['signature'], timestamp=b['timestamp'], nonce=b['nonce'])
             resp.body = (b['echostr'])
         except InvalidSignatureException:
             pass
@@ -164,7 +163,7 @@ class Connect:
                 replyTxt = replyTxt.replace("小i", config.chatbot_name)
             if "囧囧" in replyTxt:
                 replyTxt = replyTxt.replace("囧囧", config.chatbot_name)
-            if input_language_zh == False and self.judge_language(replyTxt) == "zh":
+            if input_language_zh is False and self.judge_language(replyTxt) == "zh":
                 replyTxt = translate(replyTxt, 'zh')
             # replyTxt = replyTxt + "  ({})".format(channel[k])
             return replyTxt
