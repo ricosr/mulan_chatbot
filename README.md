@@ -15,4 +15,4 @@
 * 最好是Linux, Windows上微信依赖库安装会出现问题
 
 ## 其他:
-* 需要配合https://github.com/ricosr/retrieval_chatbot一起使用
+* 需要配合https://github.com/ricosr/retrieval_chatbot 一起使用
