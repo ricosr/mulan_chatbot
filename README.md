@@ -31,7 +31,7 @@
 
 ## environment requirement:
 * Python3
-* Operating system had better be Linux, if Windows you need to install VS2010+
+* Operating system had better be Linux, there may occur some problems about packages of WeChat in Windows
 
 ## other introduction:
 * this project need to be deployed with https://github.com/ricosr/retrieval_chatbot together
