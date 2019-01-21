@@ -70,13 +70,13 @@ def extract_info(json_info):
     return weather_dict
 
 
-def handle(message, cities_list):
-    city_name = "香港"
+def handle(message, city_name):
+    # city_name = "香港"
     day = 0
     day_key_word = {"今": 0, "明": 1, "后": 2}
-    for city in cities_list:
-        if city in message:
-            city_name = city
+    # for city in cities_list:
+    #     if city in message:
+    #         city_name = city
     for day_key, day_val in day_key_word.items():
         if day_key in message:
             day = day_val

@@ -107,6 +107,7 @@ class Connect:
 
     def getReply(self, text, input_language_zh, msg_id):
         channel = [" gen", "rule", "retrieval", "API"]
+        city_name = ''
         k = 0
         try:
             replyTxt = ''
@@ -116,11 +117,20 @@ class Connect:
                 for wea_key_word in config.weather_key_words:
                     if wea_key_word in text:
                         wea_judge = True
+                        break
+                if wea_judge is True:
+                    for city in self.cities_list:
+                        if city in text:
+                            city_name = city
+                            break
                 if wea_judge is False:
                     if "冷" in text or "热" in text:
                         for city in self.cities_list:
                             if city in text:
                                 wea_judge = True
+                                city_name = city
+                                break
+
             # 判断如果是一个字的话
             if c == 1 and '啊' not in text and '哼' not in text and '嗨' not in text:
                 k = 0
@@ -133,9 +143,9 @@ class Connect:
                 replyTxt = pchat.pretty_print_poem(poem_=poem)
                 tf.reset_default_graph()
 
-            elif c != 1 and wea_judge is True:
+            elif c != 1 and wea_judge is True and city_name != '':
                 k = 3
-                replyTxt = wea.handle(text, self.cities_list)
+                replyTxt = wea.handle(text, city_name)
                 # if "今天" in text or text == "天气":
                 #     text = "香港天气"
                 # x = urllib.parse.quote(text)
