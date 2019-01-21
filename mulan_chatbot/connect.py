@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 import urllib.request
 import re
+import logging
 import pickle
 import traceback
 
@@ -19,12 +20,16 @@ from poemChat import poemChat
 from ElizaChat import ElizaChat
 from reterival_client import Client
 from translate_l import translate
+from weather.load_cities import load_city
+from weather import wea
 import config
+
 
 # TODO: record log
 class Connect:
     def __init__(self):
         self.cache_dict = {}
+        self.cities_list = load_city()
 
     def judge_language(self, message):
         tmp_msg = ''
@@ -55,7 +60,7 @@ class Connect:
         xml = req.stream.read()
         msg = parse_message(xml)
         input_language_zh = True
-        if len(self.cache_dict) > 500:
+        if len(self.cache_dict) > 200:
             del(self.cache_dict)
             self.cache_dict = {}
         if msg.type == 'text':
@@ -100,35 +105,46 @@ class Connect:
     #             return True
     #     return False
 
-    def getReply(self,text, input_language_zh, msg_id):
-        channel = [" gen","rule","retrieval","API"]
+    def getReply(self, text, input_language_zh, msg_id):
+        channel = [" gen", "rule", "retrieval", "API"]
         k = 0
         try:
-            replyTxt=''
+            replyTxt = ''
+            wea_judge = False
             c = len(text)
+            if c != 1:
+                for wea_key_word in config.weather_key_words:
+                    if wea_key_word in text:
+                        wea_judge = True
+                if wea_judge is False:
+                    if "冷" in text or "热" in text:
+                        for city in self.cities_list:
+                            if city in text:
+                                wea_judge = True
             # 判断如果是一个字的话
             if c == 1 and '啊' not in text and '哼' not in text and '嗨' not in text:
                 k = 0
                 pchat = poemChat()
                 a = pchat.is_chinese(text)
-                if a == False:
+                if a is False:
                     return '一个汉字呦'
                 poem_flag = 24
                 poem = pchat.gen_poem(text, poem_flag)
                 replyTxt = pchat.pretty_print_poem(poem_=poem)
                 tf.reset_default_graph()
 
-            elif "天气" in text or text == "天气":
+            elif c != 1 and wea_judge is True:
                 k = 3
-                if "今天" in text or text == "天气":
-                    text = "香港天气"
-                x = urllib.parse.quote(text)
-                link = urllib.request.urlopen(
-                   "http://nlp.xiaoi.com/robot/webrobot?&callback=__webrobot_processMsg&data=%7B%22sessionId%22%3A%22ff725c236e5245a3ac825b2dd88a7501%22%2C%22robotId%22%3A%22webbot%22%2C%22userId%22%3A%227cd29df3450745fbbdcf1a462e6c58e6%22%2C%22body%22%3A%7B%22content%22%3A%22" + x + "%22%7D%2C%22type%22%3A%22txt%22%7D")
-                html_doc = link.read().decode()
-                reply_list = re.findall(r'\"content\":\"(.+?)\\r\\n\"', html_doc)
-                # print("小i：" + reply_list[-1])
-                replyTxt = reply_list[-1]
+                replyTxt = wea.handle(text, self.cities_list)
+                # if "今天" in text or text == "天气":
+                #     text = "香港天气"
+                # x = urllib.parse.quote(text)
+                # link = urllib.request.urlopen(
+                #    "http://nlp.xiaoi.com/robot/webrobot?&callback=__webrobot_processMsg&data=%7B%22sessionId%22%3A%22ff725c236e5245a3ac825b2dd88a7501%22%2C%22robotId%22%3A%22webbot%22%2C%22userId%22%3A%227cd29df3450745fbbdcf1a462e6c58e6%22%2C%22body%22%3A%7B%22content%22%3A%22" + x + "%22%7D%2C%22type%22%3A%22txt%22%7D")
+                # html_doc = link.read().decode()
+                # reply_list = re.findall(r'\"content\":\"(.+?)\\r\\n\"', html_doc)
+                # # print("小i：" + reply_list[-1])
+                # replyTxt = reply_list[-1]
 
             #多于一个字走chat路线
             else:
@@ -166,13 +182,16 @@ class Connect:
             if input_language_zh is False and self.judge_language(replyTxt) == "zh":
                 replyTxt = translate(replyTxt, 'zh')
             # replyTxt = replyTxt + "  ({})".format(channel[k])
-            return replyTxt
+            if replyTxt:
+                return replyTxt
+            else:
+                return "不想理你了，诶，和你聊天好累啊。。。"
         except Exception as e:
-            # traceback.print_exc()
+            logging.error(traceback.print_exc())
             return "不想理你了，诶，和你聊天好累啊"
 
 if __name__ == '__main__':
     app = falcon.API()
     app.add_route('/', Connect())
-    server = WSGIServer(('0.0.0.0', 10010), app)
+    server = WSGIServer(('0.0.0.0', 80), app)
     server.serve_forever()
