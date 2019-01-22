@@ -75,9 +75,9 @@ class Connect:
                     # print(self.cache_dict)
                     replyTxt = self.cache_dict[inputTxt]
                     reply = TextReply(content=replyTxt, message=msg)
-                    # del(self.cache_dict)
-                    # self.cache_dict = {}
-                    xml= reply.render()
+                    del(self.cache_dict)
+                    self.cache_dict = {}
+                    xml = reply.render()
                     resp.body = (xml)
                     resp.status = falcon.HTTP_200
                     return
@@ -191,6 +191,8 @@ class Connect:
                 replyTxt = replyTxt.replace("小通", config.chatbot_name)
             if "SimSimi" in replyTxt:
                 replyTxt = replyTxt.replace("SimSimi", config.chatbot_name)
+            if "simsimi" in replyTxt:
+                replyTxt = replyTxt.replace("simsimi", config.chatbot_name)
             if "小i" in replyTxt:
                 replyTxt = replyTxt.replace("小i", config.chatbot_name)
             if "囧囧" in replyTxt:

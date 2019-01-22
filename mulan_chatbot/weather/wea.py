@@ -15,6 +15,7 @@ def weather(city_name, day):
 
 
 def extract_info(json_info):
+    # print(json_info)
     weather_dict = {}
     exp_judge = False
     two_win = False
@@ -55,7 +56,10 @@ def extract_info(json_info):
                 ref_info += ref["level"] + ','
             if ref["desc"]:
                 ref_info += ref["desc"] + '\n'
-        body_info = date + ',' + week + '\n' + wea + '\n' + "最高:{}".format(tem1) + "~~" + "最低:{}".format(tem2) + ",当前温度:{}".format(tem) + '\n'
+        if i == 0:
+            body_info = date + ',' + week + '\n' + wea + '\n' + "最高:{}".format(tem1) + "~~" + "最低:{}".format(tem2) + ",当前温度:{}".format(tem) + '\n'
+        else:
+            body_info = date + ',' + week + '\n' + wea + '\n' + "最高:{}".format(tem1) + "~~" + "最低:{}".format(tem2) + '\n'
         if exp_judge is False:
             if air:
                 body_info = body_info + "空气指数:{}({}), {}".format(air, air_level, air_tips) + '\n'
@@ -85,5 +89,5 @@ def handle(message, city_name):
 
 
 # if __name__ == '__main__':
-#     import load_cities
-#     print(handle("北京后天天气", load_cities.load_city()))
+#     # import load_cities
+#     print(handle("今天北京天气", "北京"))
