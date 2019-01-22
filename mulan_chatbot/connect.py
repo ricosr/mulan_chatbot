@@ -25,7 +25,10 @@ from weather import wea
 import config
 
 
-# TODO: record log
+logging.basicConfig(filename='logger.log', level=logging.INFO)
+logging.debug('debug message')
+
+
 class Connect:
     def __init__(self):
         self.cache_dict = {}
@@ -84,8 +87,8 @@ class Connect:
                 input_language_zh = False
                 inputTxt = translate(inputTxt, 'en')
                 #print(inputTxt)
-            replyTxt = self.getReply(inputTxt, input_language_zh, msg.id)
-            if "@@##$$@@" not in replyTxt and replyTxt:
+            replyTxt, reply_type = self.getReply(inputTxt, input_language_zh, msg.id)
+            if "@@##$$@@" not in replyTxt and replyTxt and reply_type == "chat":
                 # print(inputTxt, replyTxt)
                 self.cache_dict[inputTxt] = replyTxt
             reply = TextReply(content=replyTxt, message=msg)
@@ -142,10 +145,12 @@ class Connect:
                 poem = pchat.gen_poem(text, poem_flag)
                 replyTxt = pchat.pretty_print_poem(poem_=poem)
                 tf.reset_default_graph()
+                reply_type = "poem"
 
             elif c != 1 and wea_judge is True and city_name != '':
                 k = 3
                 replyTxt = wea.handle(text, city_name)
+                reply_type = "weather"
                 # if "今天" in text or text == "天气":
                 #     text = "香港天气"
                 # x = urllib.parse.quote(text)
@@ -159,6 +164,7 @@ class Connect:
             #多于一个字走chat路线
             else:
                 k = 1
+                reply_type = "chat"
                 eliza = ElizaChat()
                 replyTxt = eliza.analyze(text)
                 replyTxt = replyTxt
@@ -193,12 +199,12 @@ class Connect:
                 replyTxt = translate(replyTxt, 'zh')
             # replyTxt = replyTxt + "  ({})".format(channel[k])
             if replyTxt:
-                return replyTxt
+                return replyTxt, reply_type
             else:
-                return "不想理你了，诶，和你聊天好累啊。。。"
+                return "不想理你了，诶，和你聊天好累啊。。。", "none"
         except Exception as e:
             logging.error(traceback.print_exc())
-            return "不想理你了，诶，和你聊天好累啊"
+            return "不想理你了，诶，和你聊天好累啊", "err"
 
 if __name__ == '__main__':
     app = falcon.API()
