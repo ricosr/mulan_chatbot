@@ -4,6 +4,7 @@ import re
 import logging
 import pickle
 import traceback
+from random import choice
 
 
 from gevent.pywsgi import WSGIServer
@@ -18,7 +19,7 @@ import tensorflow as tf
 
 from poemChat import poemChat
 from ElizaChat import ElizaChat
-from reterival_client import Client
+from reterival_client import Client, load_clients, select_client
 from translate_l import translate
 from weather.load_cities import load_city
 from weather import wea
@@ -33,6 +34,7 @@ class Connect:
     def __init__(self):
         self.cache_dict = {}
         self.cities_list = load_city()
+        load_clients()
 
     def judge_language(self, message):
         tmp_msg = ''
@@ -110,6 +112,7 @@ class Connect:
 
     def getReply(self, text, input_language_zh, msg_id):
         channel = [" gen", "rule", "retrieval", "API"]
+        default_reply = ["不想理你了，诶，和你聊天好累啊", "我没理解你的意思，可以具体一点吗？", "主人，你在讲啥子嘛？", "我太笨，你能换个说法吗？"]
         city_name = ''
         k = 0
         try:
@@ -170,8 +173,11 @@ class Connect:
                 replyTxt = replyTxt
                 if replyTxt == "@$@":
                     k = 2
-                    self.retrieval_cli = Client()
-                    replyTxt, score = self.retrieval_cli.get_response(text, msg_id)
+                    cli, cli_no = select_client()
+                    # print(cli, cli.socekt, cli_no)
+                    replyTxt, score = cli.get_response(text, cli_no, msg_id)
+                    # self.retrieval_cli = Client()
+                    # replyTxt, score = self.retrieval_cli.get_response(text, msg_id)
                     # replyTxt, score = self.retrieval_cli.get()
                     # score = float(score)
                     # replyTxt = replyTxt
@@ -203,10 +209,13 @@ class Connect:
             if replyTxt:
                 return replyTxt, reply_type
             else:
-                return "不想理你了，诶，和你聊天好累啊。。。", "none"
+                logging.info(replyTxt + reply_type + "none")
+                return choice(default_reply), "none"
         except Exception as e:
-            logging.error(traceback.print_exc())
-            return "不想理你了，诶，和你聊天好累啊", "err"
+            logging.error(traceback.format_exc())
+            logging.error(repr(e))
+            logging.error(replyTxt)
+            return choice(default_reply), "err"
 
 if __name__ == '__main__':
     app = falcon.API()
