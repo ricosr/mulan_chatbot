@@ -24,6 +24,7 @@ from translate_l import translate
 from weather.load_cities import load_city
 from weather import wea
 import config
+from multi_turn_manage import slots, state_tracker
 
 
 logging.basicConfig(filename='logger.log', level=logging.INFO)
@@ -33,6 +34,7 @@ logging.debug('debug message')
 class Connect:
     def __init__(self):
         self.cache_dict = {}
+        self.user_dict = {}
         self.cities_list = load_city()
         load_clients()
 
@@ -64,17 +66,15 @@ class Connect:
     def on_post(self, req, resp):
         xml = req.stream.read()
         msg = parse_message(xml)
+        from_user_name = self.extract_from_username(msg)
         input_language_zh = True
         if len(self.cache_dict) > 200:
             del(self.cache_dict)
             self.cache_dict = {}
         if msg.type == 'text':
-            # print(self.cache_dict)
             inputTxt = msg.content
             if inputTxt in self.cache_dict:
                 if self.cache_dict[inputTxt]:
-                    # print("cache success!!!")
-                    # print(self.cache_dict)
                     replyTxt = self.cache_dict[inputTxt]
                     reply = TextReply(content=replyTxt, message=msg)
                     del(self.cache_dict)
@@ -83,15 +83,12 @@ class Connect:
                     resp.body = (xml)
                     resp.status = falcon.HTTP_200
                     return
-            # print(inputTxt)
             language = self.judge_language(inputTxt)
             if language == 'en':
                 input_language_zh = False
                 inputTxt = translate(inputTxt, 'en')
-                #print(inputTxt)
-            replyTxt, reply_type = self.getReply(inputTxt, input_language_zh, msg.id)
+            replyTxt, reply_type = self.getReply(inputTxt, input_language_zh, msg.id, from_user_name)
             if "@@##$$@@" not in replyTxt and replyTxt and reply_type == "chat":
-                # print(inputTxt, replyTxt)
                 self.cache_dict[inputTxt] = replyTxt
             reply = TextReply(content=replyTxt, message=msg)
             xml = reply.render()
@@ -103,6 +100,16 @@ class Connect:
             resp.body = (xml)
             resp.status = falcon.HTTP_200
 
+    def extract_from_username(self, msg):
+        msg_para_ls = msg.split("), (")
+        from_user_name_index = 1
+        for index in range(len(msg_para_ls)):
+            if "FromUserName" in msg_para_ls[index]:
+                from_user_name_index = index
+                break
+        from_user_name = msg_para_ls[from_user_name_index].split(',')[1].strip('\'')
+        return from_user_name
+
     # def check_city_and_weather(self, sentence):
     #     seg_list = jieba.lcut(sentence, cut_all=False)
     #     for _i, seg in enumerate(seg_list):
@@ -110,9 +117,9 @@ class Connect:
     #             return True
     #     return False
 
-    def getReply(self, text, input_language_zh, msg_id):
+    def getReply(self, text, input_language_zh, msg_id, from_user_name):
         channel = [" gen", "rule", "retrieval", "API"]
-        default_reply = ["不想理你了，诶，和你聊天好累啊", "我没理解你的意思，可以具体一点吗？", "主人，你在讲啥子嘛？", "我太笨，你能换个说法吗？"]
+        default_reply = ["什么什么什么？没听懂", "我没理解你的意思，可以具体一点吗？", "主人，你在讲啥子嘛？", "我太笨，你能换个说法吗？"]
         city_name = ''
         k = 0
         try:
@@ -123,11 +130,20 @@ class Connect:
                 for wea_key_word in config.weather_key_words:
                     if wea_key_word in text:
                         wea_judge = True
+                        # self.user_dict[from_user_name] = {"weather": state_tracker.State(None)}
+                        if from_user_name in self.user_dict:
+                            if "weather" not in self.user_dict[from_user_name]:
+                                self.user_dict[from_user_name] = {"weather": state_tracker.State(None)}
+                            else:
+                                pass
+                        else:
+                            self.user_dict[from_user_name] = {"weather": state_tracker.State(None)}
                         break
                 if wea_judge is True:
                     for city in self.cities_list:
                         if city in text:
                             city_name = city
+                            self.user_dict[from_user_name]["weather"].add_one_state("city", city, 1)
                             break
                 if wea_judge is False:
                     if "冷" in text or "热" in text:
@@ -138,7 +154,7 @@ class Connect:
                                 break
 
             # 判断如果是一个字的话
-            if c == 1 and '啊' not in text and '哼' not in text and '嗨' not in text:
+            if c == 1 and '啊' not in text and '哼' not in text and '嗨' not in text and '好' not in text:
                 k = 0
                 pchat = poemChat()
                 a = pchat.is_chinese(text)
@@ -154,15 +170,6 @@ class Connect:
                 k = 3
                 replyTxt = wea.handle(text, city_name)
                 reply_type = "weather"
-                # if "今天" in text or text == "天气":
-                #     text = "香港天气"
-                # x = urllib.parse.quote(text)
-                # link = urllib.request.urlopen(
-                #    "http://nlp.xiaoi.com/robot/webrobot?&callback=__webrobot_processMsg&data=%7B%22sessionId%22%3A%22ff725c236e5245a3ac825b2dd88a7501%22%2C%22robotId%22%3A%22webbot%22%2C%22userId%22%3A%227cd29df3450745fbbdcf1a462e6c58e6%22%2C%22body%22%3A%7B%22content%22%3A%22" + x + "%22%7D%2C%22type%22%3A%22txt%22%7D")
-                # html_doc = link.read().decode()
-                # reply_list = re.findall(r'\"content\":\"(.+?)\\r\\n\"', html_doc)
-                # # print("小i：" + reply_list[-1])
-                # replyTxt = reply_list[-1]
 
             #多于一个字走chat路线
             else:
@@ -174,25 +181,7 @@ class Connect:
                 if replyTxt == "@$@":
                     k = 2
                     cli, cli_no = select_client()
-                    # print(cli, cli.socekt, cli_no)
                     replyTxt, score = cli.get_response(text, cli_no, msg_id)
-                    # self.retrieval_cli = Client()
-                    # replyTxt, score = self.retrieval_cli.get_response(text, msg_id)
-                    # replyTxt, score = self.retrieval_cli.get()
-                    # score = float(score)
-                    # replyTxt = replyTxt
-                    # print("score:{}, replyTxt:{}".format(score, replyTxt))
-                    # if score < 0.88 or "形容的" in text:
-                    #     k = 3
-                    #     x = urllib.parse.quote(text)
-                    #     link = urllib.request.urlopen(
-                    #        "http://nlp.xiaoi.com/robot/webrobot?&callback=__webrobot_processMsg&data=%7B%22sessionId%22%3A%22ff725c236e5245a3ac825b2dd88a7501%22%2C%22robotId%22%3A%22webbot%22%2C%22userId%22%3A%227cd29df3450745fbbdcf1a462e6c58e6%22%2C%22body%22%3A%7B%22content%22%3A%22" + x + "%22%7D%2C%22type%22%3A%22txt%22%7D")
-                    #     html_doc = link.read().decode()
-                    #     reply_list = re.findall(r'\"content\":\"(.+?)\\r\\n\"', html_doc)
-                    #     replyTxt=reply_list[-1]
-                    #     replyTxt = replyTxt
-            # if "小i机器人" in replyTxt:
-            #     replyTxt = replyTxt.replace("小i机器人", config.chatbot_name)
             if "小通" in replyTxt:
                 replyTxt = replyTxt.replace("小通", config.chatbot_name)
             if "SimSimi" in replyTxt:
@@ -205,7 +194,6 @@ class Connect:
                 replyTxt = replyTxt.replace("囧囧", config.chatbot_name)
             if input_language_zh is False and self.judge_language(replyTxt) == "zh":
                 replyTxt = translate(replyTxt, 'zh')
-            # replyTxt = replyTxt + "  ({})".format(channel[k])
             if replyTxt:
                 return replyTxt, reply_type
             else:
