@@ -5,6 +5,7 @@ import logging
 import pickle
 import traceback
 from random import choice
+import copy
 
 
 from gevent.pywsgi import WSGIServer
@@ -34,7 +35,8 @@ logging.debug('debug message')
 class Connect:
     def __init__(self):
         self.cache_dict = {}
-        self.user_dict = {}
+        self.user_state_dict = {}
+        self.user_slot_dict = {}
         self.cities_list = load_city()
         load_clients()
 
@@ -126,32 +128,70 @@ class Connect:
             replyTxt = ''
             wea_judge = False
             c = len(text)
+
             if c != 1:
+                # TODO: NLU and intent for weather
                 for wea_key_word in config.weather_key_words:
                     if wea_key_word in text:
                         wea_judge = True
                         # self.user_dict[from_user_name] = {"weather": state_tracker.State(None)}
-                        if from_user_name in self.user_dict:
-                            if "weather" not in self.user_dict[from_user_name]:
-                                self.user_dict[from_user_name] = {"weather": state_tracker.State(None)}
+                        if from_user_name in self.user_state_dict:
+                            if "weather" not in self.user_state_dict[from_user_name]:
+                                self.user_state_dict[from_user_name] = {"weather": state_tracker.State(None)}
+                                self.user_slot_dict[from_user_name] = {"weather_slot": copy.deepcopy(slots.weather_slot)}
                             else:
                                 pass
                         else:
-                            self.user_dict[from_user_name] = {"weather": state_tracker.State(None)}
+                            self.user_state_dict[from_user_name] = {"weather": state_tracker.State(None)}
+                            self.user_slot_dict[from_user_name] = {"weather_slot": copy.deepcopy(slots.weather_slot)}
                         break
-                if wea_judge is True:
+                if from_user_name in self.user_state_dict:  # TODO: intent for weather
+                    if "weather" in self.user_state_dict[from_user_name]:
+                        wea_judge = True
+                if wea_judge:
                     for city in self.cities_list:
                         if city in text:
                             city_name = city
-                            self.user_dict[from_user_name]["weather"].add_one_state("city", city, 1)
+                            self.user_state_dict[from_user_name]["weather"].add_one_state("city", city, 1)
+                            self.user_state_dict[from_user_name]["weather"].get_current_slot(self.user_slot_dict[from_user_name]["weather_slot"])
                             break
-                if wea_judge is False:
-                    if "冷" in text or "热" in text:
-                        for city in self.cities_list:
-                            if city in text:
-                                wea_judge = True
-                                city_name = city
-                                break
+                # if wea_judge is False:
+                #     if "冷" in text or "热" in text:
+                #         for city in self.cities_list:
+                #             if city in text:
+                #                 wea_judge = True
+                #                 city_name = city
+                #                 break
+                if wea_judge:
+                    day = 0
+                    day_key_word = {"今": 0, "明": 1, "后": 2}
+                    for day_key, day_val in day_key_word.items():
+                        if day_key in text:
+                            day = day_val
+                            self.user_state_dict[from_user_name]["weather"].add_one_state("date", day, 1)
+                            self.user_state_dict[from_user_name]["weather"].get_current_slot(self.user_slot_dict[from_user_name]["weather_slot"])
+                            break
+                if from_user_name in self.user_state_dict:  # TODO: NLG dor weather
+                    if "weather" in self.user_state_dict[from_user_name]:
+                        reply_type = "weather"
+                        judge_state, dialogue_state = self.user_state_dict[from_user_name][
+                            "weather"].judge_dialogue_state()
+                        if not judge_state:
+                            if dialogue_state == "city":
+                                replyTxt = "您想查的是哪个城市呢？"
+                            if dialogue_state == "date":
+                                replyTxt = "昨天？今天？明天？"
+                            return replyTxt, reply_type
+                if wea_judge:   # TODO: NLG for weather
+                    judge_state, dialogue_state = self.user_state_dict[from_user_name]["weather"].judge_dialogue_state()
+                    if judge_state:
+                        city_name = self.user_slot_dict[from_user_name]["weather_slot"]["city"]
+                        day = self.user_slot_dict[from_user_name]["weather_slot"]["date"]
+                        replyTxt = wea.handle(city_name, day)
+                        reply_type = "weather"
+                        del(self.user_state_dict[from_user_name])
+                        return replyTxt, reply_type
+
 
             # 判断如果是一个字的话
             if c == 1 and '啊' not in text and '哼' not in text and '嗨' not in text and '好' not in text:
@@ -190,6 +230,8 @@ class Connect:
                 replyTxt = replyTxt.replace("simsimi", config.chatbot_name)
             if "小i" in replyTxt:
                 replyTxt = replyTxt.replace("小i", config.chatbot_name)
+            if "菲菲" in replyTxt:
+                replyTxt = replyTxt.replace("小i", config.chatbot_name)
             if "囧囧" in replyTxt:
                 replyTxt = replyTxt.replace("囧囧", config.chatbot_name)
             if input_language_zh is False and self.judge_language(replyTxt) == "zh":
@@ -204,6 +246,14 @@ class Connect:
             logging.error(repr(e))
             logging.error(replyTxt)
             return choice(default_reply), "err"
+
+    # def judge_dialogue_state(self, from_user_name):
+    #     if self.user_state_dict[from_user_name]:
+    #         if self.user_state_dict[from_user_name]["weather"]:
+    #             pass
+
+
+
 
 if __name__ == '__main__':
     app = falcon.API()
