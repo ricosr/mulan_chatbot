@@ -4,7 +4,7 @@ import json
 
 
 def load_city():
-    with open("city.json", "r") as fw:
+    with open("weather/city.json", "r") as fw:
         data = fw.read()
 
     city_list = []

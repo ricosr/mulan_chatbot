@@ -63,7 +63,7 @@ class State:
     def judge_dialogue_state(self):
         if self.state_dict:
             for slot_state, value_dict in self.state_dict.items():
-                if value_dict["slot_value"] is not None and value_dict["slot_value"] != 0 and value_dict["confidence"] == 1:
+                if value_dict["slot_value"] is not None and value_dict["confidence"] == 1:
                     continue
                 else:
                     return False, slot_state
