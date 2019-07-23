@@ -103,8 +103,6 @@ class Connect:
             resp.status = falcon.HTTP_200
 
     def extract_from_username(self, msg):
-        print(type(msg))
-        print(msg)
         msg_para_ls = str(msg).split("), (")
         from_user_name_index = 1
         for index in range(len(msg_para_ls)):
@@ -121,24 +119,33 @@ class Connect:
     #             return True
     #     return False
 
+    def check_city(self, msg):
+        for city in self.cities_list:
+            if city in msg:
+                return city
+        return False
+
+    def check_date(self, msg):
+        for day_key, day_val in config.date_term_dict.items():
+            if day_key in msg:
+                return day_val
+        return False
+
     def getReply(self, text, input_language_zh, msg_id, from_user_name):
         # channel = [" gen", "rule", "retrieval", "API"]
         default_reply = ["什么什么什么？没听懂", "我没理解你的意思，可以具体一点吗？", "主人，你在讲啥子嘛？", "我太笨，你能换个说法吗？"]
         city_name = ''
         k = 0
         try:
-            print(self.user_state_dict)
             replyTxt = ''
             wea_judge = False
             c = len(text)
-            print("text:", text)
-            print("wea_judge:", wea_judge)
             if c != 1:
                 # TODO: NLU and intent for weather
                 for wea_key_word in config.weather_key_words:
                     if wea_key_word in text:
+                        print("0000000000000000000000")
                         wea_judge = True
-                        print("wea_judge:", wea_judge)
                         # self.user_dict[from_user_name] = {"weather": state_tracker.State(None)}
                         if from_user_name in self.user_state_dict:
                             if "weather" not in self.user_state_dict[from_user_name]:
@@ -155,49 +162,44 @@ class Connect:
                             self.user_state_dict[from_user_name]["weather"].add_one_state("date", None, 0)
                         break
                 if from_user_name in self.user_state_dict:  # TODO: intent for weather
-                    print("2222222")
                     if "weather" in self.user_state_dict[from_user_name]:
-                        wea_judge = True
-                for city in self.cities_list:
-                    if city in text:
-                        wea_judge = True
-                        break
-                if wea_judge:   # there is a bug of init object
-                    print("33333333")
-                    for city in self.cities_list:
-                        if city in text:
-                            city_name = city
-                            print(self.user_state_dict[from_user_name]["weather"])
+                        city = self.check_city(text)
+                        if city:
+                            wea_judge = True
                             self.user_state_dict[from_user_name]["weather"].add_one_state("city", city, 1)
                             self.user_state_dict[from_user_name]["weather"].get_current_slot(self.user_slot_dict[from_user_name]["weather_slot"])
-                            break
-                # if wea_judge is False:
-                #     if "冷" in text or "热" in text:
-                #         for city in self.cities_list:
-                #             if city in text:
-                #                 wea_judge = True
-                #                 city_name = city
-                #                 break
-                print(wea_judge)
-                if wea_judge:
-                    print("444444444")
-                    day = 0
-                    day_key_word = {"今": 0, "明": 1, "后": 2}
-                    for day_key, day_val in day_key_word.items():
-                        if day_key in text:
-                            day = day_val
+                        day = self.check_date(text)
+                        print("ddddddddddddddd", day)
+                        if day is not None and day is not False:
                             self.user_state_dict[from_user_name]["weather"].add_one_state("date", day, 1)
                             self.user_state_dict[from_user_name]["weather"].get_current_slot(self.user_slot_dict[from_user_name]["weather_slot"])
-                            break
-                if from_user_name in self.user_state_dict:  # TODO: NLG dor weather
-                    print("5555555555")
-                    print(self.user_state_dict[from_user_name]["weather"].get_state())
+                            wea_judge = True
+                        print("111111111111111111111")
+                # for city in self.cities_list:
+                #     if city in text:
+                #         wea_judge = True
+                #         break
+                print(wea_judge)
+                print(self.user_state_dict[from_user_name]["weather"].get_state())
+                # if wea_judge:
+                #     for city in self.cities_list:
+                #         if city in text:
+                #             self.user_state_dict[from_user_name]["weather"].add_one_state("city", city, 1)
+                #             self.user_state_dict[from_user_name]["weather"].get_current_slot(self.user_slot_dict[from_user_name]["weather_slot"])
+                #             break
+                # if wea_judge:
+                #     day = 0
+                #     for day_key, day_val in config.date_term_dict.items():
+                #         if day_key in text:
+                #             day = day_val
+                #             self.user_state_dict[from_user_name]["weather"].add_one_state("date", day, 1)
+                #             self.user_state_dict[from_user_name]["weather"].get_current_slot(self.user_slot_dict[from_user_name]["weather_slot"])
+                #             break
+                if wea_judge and from_user_name in self.user_state_dict:  # TODO: NLG dor weather
                     if "weather" in self.user_state_dict[from_user_name]:
                         reply_type = "weather"
                         self.user_state_dict[from_user_name]["weather"].get_current_slot(self.user_slot_dict[from_user_name]["weather_slot"])
-                        print(self.user_slot_dict[from_user_name]["weather_slot"])
                         judge_state, dialogue_state = self.user_state_dict[from_user_name]["weather"].judge_dialogue_state()
-                        print(judge_state, dialogue_state)
                         if not judge_state:
                             if dialogue_state == "city":
                                 replyTxt = "您想查的是哪个城市呢？"
@@ -205,9 +207,7 @@ class Connect:
                                 replyTxt = "今天？明天？后天？"
                             return replyTxt, reply_type
                 if wea_judge:   # TODO: NLG for weather
-                    print("66666666666")
                     judge_state, dialogue_state = self.user_state_dict[from_user_name]["weather"].judge_dialogue_state()
-                    print(judge_state, dialogue_state)
                     if judge_state:
                         city_name = self.user_slot_dict[from_user_name]["weather_slot"]["city"]
                         day = self.user_slot_dict[from_user_name]["weather_slot"]["date"]
@@ -230,15 +230,13 @@ class Connect:
                 tf.reset_default_graph()
                 reply_type = "poem"
 
-            elif c != 1 and wea_judge is True and city_name != '':
-                print("77777777777777")
-                k = 3
-                replyTxt = wea.handle(text, city_name)
-                reply_type = "weather"
+            # elif c != 1 and wea_judge is True and city_name != '':
+            #     k = 3
+            #     replyTxt = wea.handle(text, city_name)
+            #     reply_type = "weather"
 
             #多于一个字走chat路线
             else:
-                print("8888888888888")
                 k = 1
                 reply_type = "chat"
                 eliza = ElizaChat()
@@ -279,9 +277,7 @@ class Connect:
     #             pass
 
 
-
-
-if __name__ == '__main__':   
+if __name__ == '__main__':
     app = falcon.API()
     app.add_route('/', Connect())
     server = WSGIServer(('0.0.0.0', 80), app)

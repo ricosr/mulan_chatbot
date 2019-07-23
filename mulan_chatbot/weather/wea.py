@@ -21,7 +21,7 @@ def extract_info(json_info):
     two_win = False
     update_time = "更新时间:" + json_info["update_time"]
     city = json_info["city"]
-    head_info = update_time + '\n' + city + '\n'
+    head_info = city + '\n'
     data = json_info["data"]
     for i in range(len(data)):
         date = data[i]["date"]
@@ -70,7 +70,7 @@ def extract_info(json_info):
         else:
             body_info = body_info + "{}, {}".format(win1, win_speed) + '\n'
         body_info = body_info + ref_info
-        weather_dict[i] = head_info + body_info
+        weather_dict[i] = head_info + body_info + '\n' + update_time
     return weather_dict
 
 
