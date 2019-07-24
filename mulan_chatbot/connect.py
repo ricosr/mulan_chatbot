@@ -144,7 +144,6 @@ class Connect:
                 # TODO: NLU and intent for weather
                 for wea_key_word in config.weather_key_words:
                     if wea_key_word in text:
-                        print("0000000000000000000000")
                         wea_judge = True
                         # self.user_dict[from_user_name] = {"weather": state_tracker.State(None)}
                         if from_user_name in self.user_state_dict:
@@ -169,18 +168,14 @@ class Connect:
                             self.user_state_dict[from_user_name]["weather"].add_one_state("city", city, 1)
                             self.user_state_dict[from_user_name]["weather"].get_current_slot(self.user_slot_dict[from_user_name]["weather_slot"])
                         day = self.check_date(text)
-                        print("ddddddddddddddd", day)
                         if day is not None and day is not False:
                             self.user_state_dict[from_user_name]["weather"].add_one_state("date", day, 1)
                             self.user_state_dict[from_user_name]["weather"].get_current_slot(self.user_slot_dict[from_user_name]["weather_slot"])
                             wea_judge = True
-                        print("111111111111111111111")
                 # for city in self.cities_list:
                 #     if city in text:
                 #         wea_judge = True
                 #         break
-                print(wea_judge)
-                print(self.user_state_dict[from_user_name]["weather"].get_state())
                 # if wea_judge:
                 #     for city in self.cities_list:
                 #         if city in text:
@@ -274,7 +269,7 @@ class Connect:
     # def judge_dialogue_state(self, from_user_name):
     #     if self.user_state_dict[from_user_name]:
     #         if self.user_state_dict[from_user_name]["weather"]:
-    #             pass
+    #             passprint
 
 
 if __name__ == '__main__':
