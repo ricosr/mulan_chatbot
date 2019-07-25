@@ -37,6 +37,7 @@ class Connect:
         self.cache_dict = {}
         self.user_state_dict = {}
         self.user_slot_dict = {}
+        self.user_domain_tracker = {}
         self.cities_list = load_city()
         load_clients()
 
@@ -132,7 +133,8 @@ class Connect:
         return False
 
     def getReply(self, text, input_language_zh, msg_id, from_user_name):
-        # channel = [" gen", "rule", "retrieval", "API"]
+        if from_user_name not in self.user_domain_tracker:
+            self.user_domain_tracker[from_user_name] = ''
         default_reply = ["什么什么什么？没听懂", "我没理解你的意思，可以具体一点吗？", "主人，你在讲啥子嘛？", "我太笨，你能换个说法吗？"]
         city_name = ''
         k = 0
@@ -145,6 +147,7 @@ class Connect:
                 for wea_key_word in config.weather_key_words:
                     if wea_key_word in text:
                         wea_judge = True
+                        self.user_domain_tracker[from_user_name] = "weather"
                         # self.user_dict[from_user_name] = {"weather": state_tracker.State(None)}
                         if from_user_name in self.user_state_dict:
                             if "weather" not in self.user_state_dict[from_user_name]:
@@ -165,6 +168,7 @@ class Connect:
                         city = self.check_city(text)
                         if city:
                             wea_judge = True
+                            self.user_domain_tracker[from_user_name] = "weather"
                             self.user_state_dict[from_user_name]["weather"].add_one_state("city", city, 1)
                             self.user_state_dict[from_user_name]["weather"].get_current_slot(self.user_slot_dict[from_user_name]["weather_slot"])
                         day = self.check_date(text)
@@ -172,6 +176,7 @@ class Connect:
                             self.user_state_dict[from_user_name]["weather"].add_one_state("date", day, 1)
                             self.user_state_dict[from_user_name]["weather"].get_current_slot(self.user_slot_dict[from_user_name]["weather_slot"])
                             wea_judge = True
+                            self.user_domain_tracker[from_user_name] = "weather"
                 # for city in self.cities_list:
                 #     if city in text:
                 #         wea_judge = True
@@ -208,13 +213,18 @@ class Connect:
                         day = self.user_slot_dict[from_user_name]["weather_slot"]["date"]
                         replyTxt = wea.handle(city_name, day)
                         reply_type = "weather"
-                        del(self.user_state_dict[from_user_name])
+                        # del(self.user_state_dict[from_user_name])
                         return replyTxt, reply_type
 
 
             # 判断如果是一个字的话
             if c == 1 and '啊' not in text and '哼' not in text and '嗨' not in text and '好' not in text:
-                k = 0
+                print(1, self.user_domain_tracker[from_user_name])
+                if self.user_domain_tracker[from_user_name] != "weather":
+                    if from_user_name in self.user_state_dict:
+                        self.user_state_dict.pop(from_user_name)
+                        self.user_slot_dict.pop(from_user_name)
+                self.user_domain_tracker[from_user_name] = "poem"
                 pchat = poemChat()
                 a = pchat.is_chinese(text)
                 if a is False:
@@ -232,13 +242,17 @@ class Connect:
 
             #多于一个字走chat路线
             else:
-                k = 1
+                print(2, self.user_domain_tracker[from_user_name])
+                if self.user_domain_tracker[from_user_name] != "weather":
+                    if from_user_name in self.user_state_dict:
+                        self.user_state_dict.pop(from_user_name)
+                        self.user_slot_dict.pop(from_user_name)
+                self.user_domain_tracker[from_user_name] = "chitchat"
                 reply_type = "chat"
                 eliza = ElizaChat()
                 replyTxt = eliza.analyze(text)
                 replyTxt = replyTxt
                 if replyTxt == "@$@":
-                    k = 2
                     cli, cli_no = select_client()
                     replyTxt, score = cli.get_response(text, cli_no, msg_id)
             if "小通" in replyTxt:
