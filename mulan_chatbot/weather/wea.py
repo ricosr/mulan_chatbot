@@ -5,7 +5,7 @@ import requests
 
 def weather(city_name, day):
     # try:
-        weather_info = requests.get('https://www.tianqiapi.com/api/?version=v1&city={}'.format(city_name))
+        weather_info = requests.get('https://www.tianqiapi.com/api/?version=v1&city={}&appid=12345678&appsecret=abcdwfg'.format(city_name))
         weather_info.encoding = weather_info.apparent_encoding
         # print(weather_info.json())
         weather_dict = extract_info(weather_info.json())
