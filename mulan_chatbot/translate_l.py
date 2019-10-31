@@ -20,6 +20,7 @@ def combine_url(q, fromLang, toLang):
     myurl = myurl+'?appKey='+appKey+'&q='+urllib.parse.quote(q)+'&from='+fromLang+'&to='+toLang+'&salt='+str(salt)+'&sign='+sign
     return myurl
 
+
 def translate(q, key):
     if key == 'en':
         fromLang = 'EN'
